@@ -31,8 +31,6 @@ end
 
 
 local default_biome = {
-    name = "default",
-
     node_dust = minetest.get_content_id("air"),
 
     node_top = minetest.get_content_id("mapgen_dirt_with_grass"),
@@ -97,6 +95,7 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
                 local idx = area:indexp(pos)
                 local depth = height - y
 
+                -- Update biome cache if this node is on a different biome
                 local biomedata = core.get_biome_data(pos)
                 if biomedata.biome ~= current_biomeid then
                     local biomedef = biome_definitions[biomedata.biome]
@@ -116,8 +115,10 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
                 end
 
                 
+                -- First check, if this is too deep for anything, just place stone
                 if depth > filler_cutoff then
                     data[idx] = node_stone
+                -- Is it potentially underwater?
                 elseif y <= 0 then
                     if depth < 0 and y > -water_top_cutoff then
                 	    data[idx] = node_water_top
@@ -126,10 +127,12 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
                     elseif depth < riverbed_cutoff then
                         data[idx] = node_riverbed
                     else
+                        -- Placing stone again just in case the riverbed cutoff isn't as deep as the filler cutoff
                 	    data[idx] = node_stone
                     end
                 else
                     if depth < 0 then
+                        -- Just air
                     elseif depth < top_cutoff then
                         data[idx] = node_top
                     elseif depth < filler_cutoff then
