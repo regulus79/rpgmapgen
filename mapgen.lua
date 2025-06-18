@@ -55,7 +55,7 @@ local default_biome = {
 -- General map height, without noise
 local map_height = function(x,z)
     -- Simple kind of cone/paraboloid/thing to test
-    return -math.sqrt((x*x + z*z) / 5 + 200) + 200
+    return -math.sqrt((x*x + z*z) / 20 + 200) + 100
 end
 
 
