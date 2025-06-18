@@ -51,8 +51,16 @@ local default_biome = {
 }
 
 
-local noiseperiods = {50, 5}
-local noiseamps = {10, 2}
+
+-- General map height, without noise
+local map_height = function(x,z)
+    -- Simple kind of cone/paraboloid/thing to test
+    return -math.sqrt((x*x + z*z) / 5 + 200) + 200
+end
+
+
+local noiseperiods = {500, 100, 50, 5}
+local noiseamps = {150, 50, 10, 2}
 
 minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
     local noises = {}
@@ -85,7 +93,7 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
         for x = minp.x, maxp.x do
             local final_noise2d_idx = noise2d_idx + x - minp.x + 1
 
-            local height = 0
+            local height = map_height(x, z)
 			for i, noisemap in pairs(noisemaps) do
 			    height = height + noisemap[final_noise2d_idx]
 			end
@@ -93,6 +101,7 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
             for y = minp.y, maxp.y do
                 local pos = {x=x, y=y, z=z}
                 local idx = area:indexp(pos)
+                -- Depth is positive when underground, negative when in air
                 local depth = height - y
 
                 -- Update biome cache if this node is on a different biome
@@ -118,7 +127,7 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
                 -- First check, if this is too deep for anything, just place stone
                 if depth > filler_cutoff then
                     data[idx] = node_stone
-                -- Is it potentially underwater?
+                -- Is it underwater?
                 elseif y <= 0 then
                     if depth < 0 and y > -water_top_cutoff then
                 	    data[idx] = node_water_top
@@ -149,5 +158,6 @@ minetest.register_on_generated(function(vmanip, minp, maxp, blockseed)
     vmanip:set_data(data)
     --vmanip:set_param2_data(param2data)
     minetest.generate_decorations(vmanip)
+    minetest.generate_ores(vmanip)
     vmanip:calc_lighting()
 end)
