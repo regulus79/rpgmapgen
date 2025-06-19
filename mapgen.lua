@@ -51,16 +51,21 @@ local default_biome = {
 }
 
 
+-- Input is slope squared because it's faster to calcuate and doesn't really matter
+-- Inspired by https://www.youtube.com/watch?v=gsJHzBTPG0Y
+local nonlinearity = function(height, slope_squared)
+    return height - 10 * slope_squared
+end
 
 -- General map height, without noise
 local map_height = function(x,z)
 	-- Simple kind of cone/paraboloid/thing to test
-	return -math.sqrt((x*x + z*z) / 20 + 200) + 100
+	return 0-- -math.sqrt((x*x + z*z) / 20 + 200) + 100
 end
 
 
-local noiseperiods = {500, 100, 50, 5}
-local noiseamps = {150, 50, 10, 2}
+local noiseperiods = {500, 100, 50, 10}
+local noiseamps = {75, 30, 10, 1}
 
 local noises = {}
 for i, period in pairs(noiseperiods) do
@@ -92,13 +97,23 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	local node_water_top, node_water, node_riverbed, node_stone, node_top, node_filler
 
 	for z = minp.z, maxp.z do
-		local x_local = 0
+		local x_local = 1
 		for x = minp.x, maxp.x do
-			local final_noise2d_idx = noise2d_idx + x_local + 1
+			local final_noise2d_idx = noise2d_idx + x_local
+
+            local x_slope_offset = x_local + 1 < 80 and 1 or -1
+            local z_slope_offset = noise2d_idx + 80 < 80*80 and 1 or -1
+
 			local height = map_height(x, z)
+            local x_offset_height = map_height(x + x_slope_offset, z)
+            local z_offset_height = map_height(x, z + z_slope_offset)
 			for _, noisemap in pairs(noisemaps) do
 				height = height + noisemap[final_noise2d_idx]
+				x_offset_height = x_offset_height + noisemap[final_noise2d_idx + x_slope_offset]
+				z_offset_height = z_offset_height + noisemap[final_noise2d_idx + 80 * z_slope_offset]
 			end
+            local slope_squared = (x_offset_height - height) * (x_offset_height - height) + (z_offset_height - height) * (z_offset_height - height)
+            height = nonlinearity(height, slope_squared)
 
 			-- Update biome cache if this node is on a different biome
 			local biomedata = core.get_biome_data({x=x, y=height, z=z})
