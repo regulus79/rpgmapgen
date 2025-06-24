@@ -7,13 +7,17 @@ local map_parameters = dofile(minetest.get_modpath("tectonicgen") .. "/map_param
 -- And initialize the noise
 for _, path in pairs(map_parameters.paths) do
 	path.node = core.get_content_id(path.node)
-	path.halfheight_node = core.get_content_id(path.halfheight_node)
 	path.noise = core.get_value_noise(path.noise)
+	if path.halfheight_node then
+		path.halfheight_node = core.get_content_id(path.halfheight_node)
+	end
 end
 
 -- Convert level ground nodes to content ids
 for _, level_ground in pairs(map_parameters.level_grounds) do
-	level_ground.node = core.get_content_id(level_ground.node)
+	if level_ground.node then
+		level_ground.node = core.get_content_id(level_ground.node)
+	end
 end
 
 
@@ -201,10 +205,14 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 			for _, path in pairs(map_parameters.paths) do
 				if distance_to_line(path.startpos, path.endpos, vector.new(x,0,z), path.noise:get_2d({x=x,y=z})) < path.radius then
 					on_path = true
-					if height % 1 > 0.5 then
-						path_node = path.node
+					if path.halfheight_node then
+						if height % 1 > 0.5 then
+							path_node = path.node
+						else
+							path_node = path.halfheight_node
+						end
 					else
-						path_node = path.halfheight_node
+						path_node = path.node
 					end
 					break
 				end
