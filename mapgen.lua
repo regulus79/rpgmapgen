@@ -1,6 +1,6 @@
 
 
-local map_parameters = dofile(minetest.get_modpath("tectonicgen") .. "/map_parameters.lua")
+local map_parameters = dofile(minetest.get_modpath("rpgmapgen_settings") .. "/map_parameters.lua")
 
 
 -- Convert path nodes to content ids
@@ -54,7 +54,7 @@ local quadratic_interpolation = function(a, b, t)
 end
 
 
-local temporary_node = core.get_content_id("tectonicgen:temporary_node")
+local temporary_node = core.get_content_id("rpgmapgen:temporary_node")
 local c_air = core.get_content_id("air")
 
 local biome_definitions = {}
