@@ -55,7 +55,7 @@ end
 
 
 local temporary_node = core.get_content_id("tectonicgen:temporary_node")
-
+local c_air = core.get_content_id("air")
 
 local biome_definitions = {}
 
@@ -106,6 +106,18 @@ local default_biome = {
 
 
 
+-- Cache all nodes which should not have dust/snow placed on them
+-- Primarily just walkable nodes (grass, water, etc) and nodebox nodes (stairs, slabs) or any node with the no_dust group
+local no_dust_nodes = {}
+for nodename, nodedef in pairs(core.registered_nodes) do
+	if nodedef.walkable == false or nodedef.drawtype == "nodebox" or nodedef.groups.no_dust then
+		no_dust_nodes[core.get_content_id(nodename)] = true
+	end
+end
+
+
+
+
 
 local noises = {}
 for i, period in pairs(map_parameters.noiseperiods) do
@@ -134,7 +146,7 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 
 	local current_biomeid = nil
 	local water_top_cutoff, riverbed_cutoff, top_cutoff, filler_cutoff
-	local node_water_top, node_water, node_riverbed, node_stone, node_top, node_filler
+	local node_water_top, node_water, node_riverbed, node_stone, node_top, node_filler, node_dust
 
 	for z = minp.z, maxp.z do
 		local x_local = 1
@@ -172,6 +184,7 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 				node_top = biomedef.node_top or default_biome.node_top
 				node_filler = biomedef.node_filler or default_biome.node_filler
 				node_stone = biomedef.node_stone or default_biome.node_stone
+				node_dust = biomedef.node_dust or default_biome.node_dust
 			end
 
 			-- Check if in range of level ground area
@@ -270,5 +283,31 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	--vmanip:set_param2_data(param2data)
 	core.generate_decorations(vmanip, minp, maxp)
 	core.generate_ores(vmanip, minp, maxp)
+
+	-- Add dust nodes after everything else has been generated
+	local data = vmanip:get_data()
+	for z = minp.z, maxp.z do
+		for x = minp.x, maxp.x do
+			-- Loop down from top until we hit something (starting from max - 1 so prevent accidentally adding dust out of bounds)
+			for y = maxp.y - 1, minp.y, -1 do
+				idx = area:indexp({x=x, y=y, z=z})
+				idx_above = area:indexp({x=x, y=y+1, z=z})
+				if data[idx] ~= c_air and data[idx_above] == c_air then
+					if no_dust_nodes[data[idx]] then break end
+					local biomedata = core.get_biome_data({x=x, y=height, z=z})
+					if biomedata.biome ~= current_biomeid then
+						current_biomeid = biomedata.biome
+						local biomedef = biome_definitions[current_biomeid]
+						node_dust = biomedef.node_dust or default_biome.node_dust
+					end
+					data[idx_above] = node_dust
+					break
+				end
+			end
+		end
+	end
+	vmanip:set_data(data)
+
+
 	vmanip:calc_lighting(minp, maxp)
 end)
