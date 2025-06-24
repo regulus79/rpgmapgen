@@ -3,10 +3,61 @@
 local map_parameters = dofile(minetest.get_modpath("tectonicgen") .. "/map_parameters.lua")
 
 
+-- Convert path nodes to content ids
+-- And initialize the noise
+for _, path in pairs(map_parameters.paths) do
+	path.node = core.get_content_id(path.node)
+	path.halfheight_node = core.get_content_id(path.halfheight_node)
+	path.noise = core.get_value_noise(path.noise)
+end
+
+-- Convert level ground nodes to content ids
+for _, level_ground in pairs(map_parameters.level_grounds) do
+	level_ground.node = core.get_content_id(level_ground.node)
+end
+
+
+local distance_to_line = function(startpos, endpos, pos, noise)
+	local flat_startpos = vector.new(startpos.x, 0, startpos.z)
+	local flat_endpos = vector.new(endpos.x, 0, endpos.z)
+	local flat_pos = vector.new(pos.x, 0, pos.z)
+	local dir = (flat_endpos - flat_startpos):normalize()
+	local len = (flat_endpos - flat_startpos):length()
+	local dist_along = (flat_pos - flat_startpos):dot(dir)
+	if dist_along > len or dist_along < 0 then
+		return math.min(flat_pos:distance(flat_startpos), flat_pos:distance(flat_endpos))
+	end
+	-- TODO maybe make the interpolation at the endpoints customizable
+	if dist_along < 30 then
+		noise = noise * dist_along / 30
+	elseif dist_along > len - 30 then
+		noise = noise * (len - dist_along) / 30
+	end
+	local rotated_dir = vector.new(-dir.z, 0, dir.x)
+	local dist_from = math.abs((flat_pos - flat_startpos):dot(rotated_dir) + noise)
+	return dist_from
+end
+
+-- Basically two quadratic curves, one flipped, connected together at (0.5, 0.5) to give a smooth transition from 0 to 1
+local quadratic_interpolation = function(a, b, t)
+	local j
+	if t < 0.5 then
+		j = 2*t^2
+	else
+		j = 1 - 2*(t - 1)^2
+	end
+	return (1 - j)*a + j*b
+end
+
+
+local temporary_node = core.get_content_id("tectonicgen:temporary_node")
+
+
 local biome_definitions = {}
 
 for biomename, biome in pairs(core.registered_biomes) do
-	biomeid = core.get_biome_id(biomename)
+	print(biomename)
+	local biomeid = core.get_biome_id(biomename)
 	if not biome_definitions[biomeid] then
 		biome_definitions[biomeid] = {}
 	end
@@ -27,8 +78,6 @@ for biomename, biome in pairs(core.registered_biomes) do
 		end
 	end
 end
-
-
 
 
 local default_biome = {
@@ -121,6 +170,46 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 				node_stone = biomedef.node_stone or default_biome.node_stone
 			end
 
+			-- Check if in range of level ground area
+			local deco_suppressed = false
+			local ground_node = nil
+			for _, level_ground in pairs(map_parameters.level_grounds) do
+				local xz_pos = level_ground.pos:copy()
+				xz_pos.y = 0
+				local dist = xz_pos:distance(vector.new(x, 0, z))
+				if dist < level_ground.radius then
+					deco_suppressed = level_ground.suppress_decorations
+					-- Adding 0.5-ish (something >0.5) to make sure paths are level with the ground
+					height = level_ground.pos.y + 0.5001
+					ground_node = level_ground.node
+					break
+				elseif dist < level_ground.radius + level_ground.interpolation_length then
+					local t = (dist - level_ground.radius) / level_ground.interpolation_length
+					height = quadratic_interpolation(level_ground.pos.y + 0.5001, height, t)
+					-- Randomly choose whether to use ground node during transition
+					if math.random() > t then
+						ground_node = level_ground.node
+					end
+					break
+				end
+			end
+
+
+			-- Check if in range of path
+			local on_path = false
+			local path_node = false
+			for _, path in pairs(map_parameters.paths) do
+				if distance_to_line(path.startpos, path.endpos, vector.new(x,0,z), path.noise:get_2d({x=x,y=z})) < path.radius then
+					on_path = true
+					if height % 1 > 0.5 then
+						path_node = path.node
+					else
+						path_node = path.halfheight_node
+					end
+					break
+				end
+			end
+
 			for y = minp.y, maxp.y do
 				-- Depth is positive when underground, negative when in air
 				local depth = height - y
@@ -143,10 +232,22 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 						data[area:indexp({x=x, y=y, z=z})] = node_stone
 					end
 				else
-					if depth < 0 then
+					if depth < -1 then
 						-- Just air
+					elseif depth < 0 then
+						if deco_suppressed then
+							-- Place a node right above the ground to stop any grass or trees from forming
+							data[area:indexp({x=x, y=y, z=z})] = temporary_node
+						end
+						-- Else, air.
 					elseif depth < top_cutoff then
-						data[area:indexp({x=x, y=y, z=z})] = node_top
+						if on_path then
+							data[area:indexp({x=x, y=y, z=z})] = path_node
+						elseif ground_node then
+							data[area:indexp({x=x, y=y, z=z})] = ground_node
+						else
+							data[area:indexp({x=x, y=y, z=z})] = node_top
+						end
 					else
 						data[area:indexp({x=x, y=y, z=z})] = node_filler
 					end
