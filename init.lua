@@ -20,9 +20,7 @@ core.register_abm({
 })
 
 
-if not core.get_modpath("rpgmapgen_settings") then
-	core.request_shutdown("`rpgmapgen` is enabled, but no `rpgmapgen_settings` mod has been created. Please add a mod folder named `rpgmapgen_settings` with an empty `init.lua`. and copy the example `map_parameters.lua` from `rpgmapgen` into it.", false, 0)
-end
+assert(core.get_modpath("rpgmapgen_settings"), "\n\nRPG Mapgen is enabled, but no `rpgmapgen_settings` mod has been created. Please copy the `rpgmapgen_settings` folder into your mods folder, and edit the `map_parameters.lua` file to customize your world!\n")
 
 
 core.register_mapgen_script(core.get_modpath("rpgmapgen") .. "/mapgen.lua")
