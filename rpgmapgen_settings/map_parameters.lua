@@ -16,6 +16,14 @@ map_parameters.noiseamps = {30, 10, 5, 1}
 
 
 
+-- General map height, before any noise or flat areas are added
+-- Useful for adding a mountain range or ocean at a specific location on the map
+map_parameters.map_height = function(x,z)
+	-- Simple dome-ish shape to test
+	return  100 - (x*x + z*z) / 100
+end
+
+
 -- Procedurally generated paths from one place to another
 map_parameters.paths = {
 	{
@@ -49,13 +57,20 @@ map_parameters.level_grounds = {
 	}
 }
 
-
--- General map height, before any noise or flat areas are added
--- Useful for adding a mountain range or ocean at a specific location on the map
-map_parameters.map_height = function(x,z)
-	-- Simple dome-ish shape to test
-	return  100 - (x*x + z*z) / 100
-end
+-- Schematics to be spawned at specific locations
+map_parameters.schematics = {
+	{
+		pos = vector.new(30,10,0),
+		-- Just an upper-bound guess at how large the schematic is. This is used to determine whether it might overlap with the mapblock being generated.
+		approx_size = 5,
+		file = core.get_modpath("default") .. "/schematics/bush.mts",
+		-- All the flags and options just like normal schematics
+		rotation = "0",
+		replacements = {},
+		force_placement = true,
+		flags = "place_center_x,place_center_z",
+	}
+}
 
 -- You can also modify the terrain generation based on the slope of the noise
 -- Inspired by https://www.youtube.com/watch?v=gsJHzBTPG0Y

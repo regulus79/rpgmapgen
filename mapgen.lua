@@ -54,6 +54,14 @@ local quadratic_interpolation = function(a, b, t)
 end
 
 
+-- For checking whether a schematic intersects with a mapblock
+local aabb_intersect = function(min1, max1, min2, max2)
+	return ((min2.x < max1.x and min2.x > min1.x) or (max2.x < max1.x and max2.x > min1.x))
+		and ((min2.y < max1.y and min2.y > min1.y) or (max2.y < max1.y and max2.y > min1.y))
+		and ((min2.z < max1.z and min2.z > min1.z) or (max2.z < max1.z and max2.z > min1.z))
+end
+
+
 local temporary_node = core.get_content_id("rpgmapgen:temporary_node")
 local c_air = core.get_content_id("air")
 
@@ -83,24 +91,25 @@ for biomename, biome in pairs(core.registered_biomes) do
 	end
 end
 
+assert(#biome_definitions > 0, "\n\n[rpgmapgen] You don't have any biomes registered yet! Make sure to add a biome with `core.register_biome(biomedef)`\n")
 
 local default_biome = {
 	node_dust = minetest.get_content_id("air"),
 
-	node_top = minetest.get_content_id("mapgen_dirt_with_grass"),
+	node_top = minetest.get_content_id("air"),
 	depth_top = 1,
 
-	node_filler = minetest.get_content_id("mapgen_dirt"),
+	node_filler = minetest.get_content_id("air"),
 	depth_filler = 3,
 
-	node_stone = minetest.get_content_id("mapgen_stone"),
+	node_stone = minetest.get_content_id("air"),
 
-	node_water = minetest.get_content_id("mapgen_water_source"),
+	node_water = minetest.get_content_id("air"),
 
 	node_water_top = minetest.get_content_id("air"),
 	depth_water_top = 0,
 
-	node_riverbed = minetest.get_content_id("mapgen_sand"),
+	node_riverbed = minetest.get_content_id("air"),
 	depth_riverbed = 2
 }
 
@@ -108,10 +117,11 @@ local default_biome = {
 
 -- Cache all nodes which should not have dust/snow placed on them
 -- Primarily just walkable nodes (grass, water, etc) and nodebox nodes (stairs, slabs) or any node with the no_dust group
+-- If the no_dust group has a value, then it can be used as a probability of dusting
 local no_dust_nodes = {}
 for nodename, nodedef in pairs(core.registered_nodes) do
 	if nodedef.walkable == false or nodedef.drawtype == "nodebox" or nodedef.groups.no_dust then
-		no_dust_nodes[core.get_content_id(nodename)] = true
+		no_dust_nodes[core.get_content_id(nodename)] = nodedef.groups.no_dust or 1
 	end
 end
 
@@ -280,6 +290,15 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	end
 
 	vmanip:set_data(data)
+
+	-- Place schematics
+	for _, schem in pairs(map_parameters.schematics) do
+		-- Skip any schematics which are too far away to ever intersect this mapblock
+		if aabb_intersect(minp, maxp, schem.pos - vector.new(schem.approx_size, schem.approx_size, schem.approx_size), schem.pos + vector.new(schem.approx_size, schem.approx_size, schem.approx_size)) then
+			core.place_schematic_on_vmanip(vmanip, schem.pos, schem.file, schem.rotation, schem.replacements, schem.force_placement, schem.flags)
+		end
+	end
+
 	--vmanip:set_param2_data(param2data)
 	core.generate_decorations(vmanip, minp, maxp)
 	core.generate_ores(vmanip, minp, maxp)
@@ -293,7 +312,7 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 				idx = area:indexp({x=x, y=y, z=z})
 				idx_above = area:indexp({x=x, y=y+1, z=z})
 				if data[idx] ~= c_air and data[idx_above] == c_air then
-					if no_dust_nodes[data[idx]] then break end
+					if no_dust_nodes[data[idx]] and math.random() < no_dust_nodes[data[idx]] then break end
 					local biomedata = core.get_biome_data({x=x, y=height, z=z})
 					if biomedata.biome ~= current_biomeid then
 						current_biomeid = biomedata.biome
