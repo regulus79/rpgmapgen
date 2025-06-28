@@ -309,11 +309,12 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 		for x = minp.x, maxp.x do
 			-- Loop down from top until we hit something (starting from max - 1 so prevent accidentally adding dust out of bounds)
 			for y = maxp.y - 1, minp.y, -1 do
-				idx = area:indexp({x=x, y=y, z=z})
-				idx_above = area:indexp({x=x, y=y+1, z=z})
+				local idx = area:indexp({x=x, y=y, z=z})
+				local idx_above = area:indexp({x=x, y=y+1, z=z})
 				if data[idx] ~= c_air and data[idx_above] == c_air then
 					if no_dust_nodes[data[idx]] and math.random() < no_dust_nodes[data[idx]] then break end
-					local biomedata = core.get_biome_data({x=x, y=height, z=z})
+					-- Ideally the y value would be the mapgen height, but that would require recalculating it. Maybe it's fine?
+					local biomedata = core.get_biome_data({x=x, y=minp.y, z=z})
 					if biomedata.biome ~= current_biomeid then
 						current_biomeid = biomedata.biome
 						local biomedef = biome_definitions[current_biomeid]
