@@ -32,7 +32,7 @@ map_parameters.paths = {
 		radius = 5,
 		node = "default:cobble",
 		-- To make walking up hills easier, you can specify a slab node to use on inclines
-		halfheight_node = "stairs:slab_cobble"
+		halfheight_node = "stairs:slab_cobble",
 		-- You can specify noise parameters to add waviness in the path
 		noise = {
 			scale = 10,
@@ -51,7 +51,7 @@ map_parameters.level_grounds = {
 		radius = 30,
 		-- Radius outside of circle which is used to interpolate between the flat ground and the surrounding mapgen
 		interpolation_length = 40,
-		node = "default:dirt_with_grass"
+		node = "default:dirt_with_grass",
 		-- If true, it tries to prevent grass from being spawned. This is a little buggy though, and it may be removed in future versions.
 		suppress_decorations = false,
 	}
