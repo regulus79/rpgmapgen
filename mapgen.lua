@@ -68,7 +68,6 @@ local c_air = core.get_content_id("air")
 local biome_definitions = {}
 
 for biomename, biome in pairs(core.registered_biomes) do
-	print(biomename)
 	local biomeid = core.get_biome_id(biomename)
 	if not biome_definitions[biomeid] then
 		biome_definitions[biomeid] = {}
