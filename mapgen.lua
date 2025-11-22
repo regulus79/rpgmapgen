@@ -137,7 +137,7 @@ for i, period in pairs(map_parameters.noiseperiods) do
 		spread = vector.new(period, period, period),
 		seed = i,
 		octaves = 1,
-	}, {x = 80, y = 80})
+	}, {x = 80, y = 80, z = 1})
 end
 
 core.register_on_generated(function(vmanip, minp, maxp, blockseed)
