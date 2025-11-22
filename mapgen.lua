@@ -178,7 +178,7 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
             height = map_parameters.slope_adjustment(height, slope_squared)
 
 			-- Update biome cache if this node is on a different biome
-			local biomedata = core.get_biome_data({x=x, y=height, z=z})
+			local biomedata = map_parameters.get_biome_data({x=x, y=height, z=z})
 			if biomedata.biome ~= current_biomeid then
 				current_biomeid = biomedata.biome
 				local biomedef = biome_definitions[current_biomeid]
@@ -295,7 +295,7 @@ core.register_on_generated(function(vmanip, minp, maxp, blockseed)
 	for _, schem in pairs(map_parameters.schematics) do
 		-- Skip any schematics which are too far away to ever intersect this mapblock
 		if aabb_intersect(minp, maxp, schem.pos - vector.new(schem.approx_size, schem.approx_size, schem.approx_size), schem.pos + vector.new(schem.approx_size, schem.approx_size, schem.approx_size)) then
-			core.place_schematic_on_vmanip(vmanip, schem.pos, schem.file, schem.rotation, schem.replacements, schem.force_placement, schem.flags)
+			core.place_schematic_on_vmanip(vmanip, schem.pos, schem.schematic, schem.rotation, schem.replacements, schem.force_placement, schem.flags)
 		end
 	end
 

@@ -79,4 +79,11 @@ map_parameters.slope_adjustment = function(height, slope_squared)
     return height - 10 * slope_squared
 end
 
+-- Function for custom biome distribution
+-- Takes in the pos, and returns a table containing the biome id {biome = 1}
+map_parameters.get_biome_data = function(pos)
+	return core.get_biome_data(pos)
+end
+
+
 return map_parameters
