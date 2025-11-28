@@ -63,7 +63,7 @@ map_parameters.schematics = {
 		pos = vector.new(30,10,0),
 		-- Just an upper-bound guess at how large the schematic is. This is used to determine whether it might overlap with the mapblock being generated.
 		approx_size = 5,
-		file = core.get_modpath("default") .. "/schematics/bush.mts",
+		schematic = core.get_modpath("default") .. "/schematics/bush.mts",
 		-- All the flags and options just like normal schematics
 		rotation = "0",
 		replacements = {},
